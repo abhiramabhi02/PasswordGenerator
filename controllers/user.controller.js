@@ -1,4 +1,5 @@
 const User = require("../models/user.model");
+const hash = require("../helpers/hashing");
 
 const normalHash = (words) => {
   const charSet =
@@ -58,9 +59,11 @@ const userRegistration = async (req, res) => {
     if (exist) {
       res.send({ status: 500, success: false, message: "user already exist" });
     } else {
+      const pass = await hash.encrypt(password);
+      console.log(pass,'pass');
       const user = new User({
         Email: email,
-        Password: password,
+        Password: pass,        
       });
       let saved = user.save();
       if (saved) {
@@ -83,7 +86,8 @@ const userLogin = async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ Email: email });
     if (user) {
-      if (user.Password === password) {
+      const pass = hash.decrypt(password, user.Password);
+      if (pass) {
         res.send({
           status: 200,
           success: true,
@@ -107,10 +111,10 @@ const userLogin = async (req, res) => {
 
 const getPasswords = async (req, res) => {
   try {
-    const email  = req.body.email
+    const email = req.body.email;
     const user = await User.findOne({ Email: email });
     if (user) {
-      res.send({  
+      res.send({
         status: 200,
         success: true,
         passwords: user.Pass,
@@ -153,10 +157,18 @@ const generatePass = async (req, res) => {
       { new: true }
     );
 
-    if(user){
-      res.send({status:200, success:true, message:'new Password generated'})
-    }else{
-      res.send({ status: 500, success: false, message: 'password generation failed' });
+    if (user) {
+      res.send({
+        status: 200,
+        success: true,
+        message: "new Password generated",
+      });
+    } else {
+      res.send({
+        status: 500,
+        success: false,
+        message: "password generation failed",
+      });
     }
   } catch (error) {
     res.send({ status: 500, success: false, message: error });
